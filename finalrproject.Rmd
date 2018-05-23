@@ -6,13 +6,11 @@ output: html_notebook
 1.3.2 Industrial and Labor Relations
 In 1947, the United States Congress passed the Taft-Hartley Amendments to the
 Wagner Act. The original Wagner Act had permitted the unions to use a Closed
-Shop Contracf unless prohibited by state law. The Taft-Hartley Amendments
-made the use of Closed Shop Contract illegal and gave individual states the right
-to prohibit union shops6 as well. These right-to-work laws have caused a wave
-of concern throughout the labor movement. A question of interest here is: What
-are the effects of these laws on the cost of living for a four-person family living
-on an intermediate budget in the United States? To answer this question a data set
-consisting of 38 geographic locations has been assembled from various sources.
+Shop Contract unless prohibited by state law. The Taft-Hartley Amendments
+made the use of Closed Shop Contract illegal and gave individual states the right to prohibit union shops as well. These right-to-work laws have caused a wave of concern throughout the labor movement. 
+A question of interest here is: What are the effects of these laws on the cost of living for a four-person family living on an intermediate budget in the United States? 
+
+To answer this question a data set consisting of 38 geographic locations has been assembled from various sources.
 The variables used are defined in Table 1.2. The Right-To-Work Laws data are
 given in Table 1.3 and can also be found at the book's Website.
 
@@ -49,36 +47,38 @@ plot(rtwl_data)
 ```
 ```{r}
 model_null <- lm( COL~1, data = rtwl_data)
-model_full <- lm( COL~PD*URate*Pop*Taxes*Income*RTWL, data=rtwl_data)
+model_full <- lm( COL~PD*URate*Pop*Taxes*Income*RTWL*lon*lat, data=rtwl_data)
 
 
 ```
 
 ```{r}
-step(model1, scope=list(lower=model_null, 
+step(model_null, scope=list(lower=model_null, 
                         upper=model_full),
      direction="forward")
 ```
-```{r}
-fit <- lm(formula = COL ~ RTWL + Pop + URate + 
-            Income + PD + RTWL:URate + 
-            RTWL:Income + URate:Income, 
-          data = rtwl_data)
-```
 
 ```{r}
-summary(fit)
+model1 <- lm(formula = COL ~ RTWL + Pop + URate + Income + PD + lon + lat + 
+    RTWL:URate + RTWL:Income + URate:Income + Income:lon + Pop:lon + 
+    URate:lon + URate:PD, data = rtwl_data)
+summary(model1)
 ```
+
+
+
+
+
 
 Normal prob plot
 ```{r}
 # qq plot for studentized resid
-qqPlot(fit, main="QQ Plot")
+qqPlot(model1, main="QQ Plot")
 ```
 
 Pred. vs StRes.
 ```{r}
-residualPlots(fit)
+residualPlots(model1)
 ```
 
 
@@ -88,60 +88,60 @@ residualPlots(fit)
 
 ```{r}
 # Assessing Outliers
-outlierTest(fit) # Bonferonni p-value for most extreme obs
-qqPlot(fit, main="QQ Plot") #qq plot for studentized resid 
-leveragePlots(fit) # leverage plots
+outlierTest(model1) # Bonferonni p-value for most extreme obs
+qqPlot(model1, main="QQ Plot") #qq plot for studentized resid 
+leveragePlots(model1) # leverage plots
 ```
 ```{r}
 # Influential Observations
 # added variable plots 
-avPlots(fit)
+avPlots(model1)
 # Cook's D plot
 # identify D values > 4/(n-k-1) 
-cutoff <- 4/((nrow(mtcars)-length(fit$coefficients)-2)) 
-plot(fit, which=4, cook.levels=cutoff)
+cutoff <- 4/((nrow(mtcars)-length(model1$coefficients)-2)) 
+plot(model1, which=4, cook.levels=cutoff)
 # Influence Plot 
-influencePlot(fit,	id="identify", main="Influence Plot", sub="Circle size is proportial to Cook's Distance" )
+influencePlot(model1,	id="identify", main="Influence Plot", sub="Circle size is proportial to Cook's Distance" )
 ```
 
 ```{r}
 # Normality of Residuals
 # qq plot for studentized resid
-qqPlot(fit, main="QQ Plot")
+qqPlot(model1, main="QQ Plot")
 # distribution of studentized residuals
 library(MASS)
-sresid <- studres(fit) 
+sresid <- studres(model1) 
 hist(sresid, freq=FALSE, 
    main="Distribution of Studentized Residuals")
-xfit<-seq(min(sresid),max(sresid),length=40) 
-yfit<-dnorm(xfit) 
-lines(xfit, yfit)
+xmodel1<-seq(min(sresid),max(sresid),length=40) 
+ymodel1<-dnorm(xmodel1) 
+lines(xmodel1, ymodel1)
 ```
 
 ```{r}
 # Evaluate homoscedasticity
 # non-constant error variance test
-ncvTest(fit)
-# plot studentized residuals vs. fitted values 
-spreadLevelPlot(fit)
+ncvTest(model1)
+# plot studentized residuals vs. model1ted values 
+spreadLevelPlot(model1)
 ```
 
 ```{r}
 # Evaluate Collinearity
-vif(fit) # variance inflation factors 
-sqrt(vif(fit)) > 2 # problem?
+vif(model1) # variance inflation factors 
+sqrt(vif(model1)) > 2 # problem?
 ```
 
 
 ```{r}
 # Test for Autocorrelated Errors
-durbinWatsonTest(fit)
+durbinWatsonTest(model1)
 ```
 
 ```{r}
 # Global test of model assumptions
 library(gvlma)
-gvmodel <- gvlma(fit) 
+gvmodel <- gvlma(model1) 
 summary(gvmodel)
 ```
 
@@ -160,7 +160,7 @@ summary(gvmodel)
 ```{r}
  #Making a Basic scatter plot matrix
  
- scatterplotMatrix(~COL+PD+URate+Pop+Taxes+Income+RTWL ,data=rtwl_data, smooth = FALSE, ellipse=
+ scatterplotMatrix(~COL+PD+URate+Pop+Taxes+Income+RTWL+lon+lat ,data=rtwl_data, smooth = FALSE, ellipse=
  FALSE, main="Simple Scatterplot Matrix")
 
 ```
@@ -179,11 +179,7 @@ dta.r
 ```
 
 
-attach(rtwl_data) 
-s3d <-scatterplot3d(COL,Income,RTWL, pch=16, highlight.3d=TRUE,
-  type="h", main="3D Scatterplot")
-fit <- lm(COL ~ Income+ RTWL, data = rtwl_data) 
-s3d$plane3d(fit)
+
 ```{r}
 
 
@@ -201,3 +197,83 @@ A6A11 <- ggplot(rtwl_data, aes(x = COL, y = PD)) + geom_point() + geom_point(aes
 A6A11
 ```
 
+```{r}
+require(ggplot2)
+require(ggmap)
+require(maps)
+```
+```{r}
+data[,1] <- as.character(data[,1])
+```
+
+```{r}
+# lonlat<-geocode(data[,1])
+#geocode(data[,1], is.character(data[,1])=TRUE)
+# lonlat2<-geocode(data[,1])
+lonlat3<-geocode(data[,1])
+```
+# ```{r}
+# lonlat2<-geocode(data[,1])
+# ```
+# ```{r}
+# lonlat1<-geocode(data[,1])
+# ```
+
+
+
+
+
+# ```{r}
+# write.csv(lonlat2,file="lonlat.csv")
+# ```
+
+```{r}
+lonlat <- read.csv("lonlat.csv")
+lonlat<-lonlat[,-1]
+
+
+```
+```{r}
+rtwl_data$lon <- lonlat$lon
+rtwl_data$lat <- lonlat$lat
+```
+
+```{r}
+ 
+library(rworldmap)
+newmap <- getMap(resolution = "med")
+plot(newmap, xlim = c(-125, -70), ylim = c(25, 50), asp = 1)
+
+points(rtwl_data$lon, rtwl_data$lat, col=ifelse(rtwl_data$RTWL==1,"red","blue"), cex = .8)
+```
+
+```{r}
+library(ggplot2)
+library(ggmap)
+library(maps)
+library(mapdata)
+```
+
+
+```{r}
+usa <- map_data("usa") # we already did this, but we can do it again
+ggplot() + geom_polygon(data = usa, aes(x=long, y = lat, group = group)) + 
+  coord_fixed(1.3) +
+    geom_point( aes(x = longi, y = lati, color=rtwl_data$COL, size=rtwl_data$Income, shape=factor(rtwl_data$RTWL)))
+```
+```{r}
+longi <- as.vector(rtwl_data$lon)
+lati <- as.vector(rtwl_data$lat)
+
+
+```
+
+```{r}
+states <- map_data("state")
+ggplot(data = states) + 
+  geom_polygon(aes(x = long, y = lat, fill = region, group = group), color = "white") + 
+  coord_fixed(1.3) +
+  guides(fill=FALSE) 
+```
+
+This is a map
