@@ -1,0 +1,203 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+1.3.2 Industrial and Labor Relations
+In 1947, the United States Congress passed the Taft-Hartley Amendments to the
+Wagner Act. The original Wagner Act had permitted the unions to use a Closed
+Shop Contracf unless prohibited by state law. The Taft-Hartley Amendments
+made the use of Closed Shop Contract illegal and gave individual states the right
+to prohibit union shops6 as well. These right-to-work laws have caused a wave
+of concern throughout the labor movement. A question of interest here is: What
+are the effects of these laws on the cost of living for a four-person family living
+on an intermediate budget in the United States? To answer this question a data set
+consisting of 38 geographic locations has been assembled from various sources.
+The variables used are defined in Table 1.2. The Right-To-Work Laws data are
+given in Table 1.3 and can also be found at the book's Website.
+
+Variable
+COL     Cost of living for a four-person family
+PD      Population density (person per square mile)
+URate   State unionization rate in 1978
+Pop     Population in 1975
+Taxes   Property taxes in 1972
+Income  Per capita income in 1974
+RTWL    Indicator variable (1 if there are right-to-work laws in the state and 0                  otherwise)
+
+```{r}
+
+library(dplyr)
+library(scatterplot3d)
+library(psych)
+library(ggplot2)
+library(car)
+library(gclus)
+library(GGally)
+library(fields)
+```
+
+
+```{r}
+data <- read.delim("P005.txt")
+rtwl_data<-data[,-1]
+```
+
+
+```{r}
+plot(rtwl_data)
+```
+```{r}
+model_null <- lm( COL~1, data = rtwl_data)
+model_full <- lm( COL~PD*URate*Pop*Taxes*Income*RTWL, data=rtwl_data)
+
+
+```
+
+```{r}
+step(model1, scope=list(lower=model_null, 
+                        upper=model_full),
+     direction="forward")
+```
+```{r}
+fit <- lm(formula = COL ~ RTWL + Pop + URate + 
+            Income + PD + RTWL:URate + 
+            RTWL:Income + URate:Income, 
+          data = rtwl_data)
+```
+
+```{r}
+summary(fit)
+```
+
+Normal prob plot
+```{r}
+# qq plot for studentized resid
+qqPlot(fit, main="QQ Plot")
+```
+
+Pred. vs StRes.
+```{r}
+residualPlots(fit)
+```
+
+
+
+
+
+
+```{r}
+# Assessing Outliers
+outlierTest(fit) # Bonferonni p-value for most extreme obs
+qqPlot(fit, main="QQ Plot") #qq plot for studentized resid 
+leveragePlots(fit) # leverage plots
+```
+```{r}
+# Influential Observations
+# added variable plots 
+avPlots(fit)
+# Cook's D plot
+# identify D values > 4/(n-k-1) 
+cutoff <- 4/((nrow(mtcars)-length(fit$coefficients)-2)) 
+plot(fit, which=4, cook.levels=cutoff)
+# Influence Plot 
+influencePlot(fit,	id="identify", main="Influence Plot", sub="Circle size is proportial to Cook's Distance" )
+```
+
+```{r}
+# Normality of Residuals
+# qq plot for studentized resid
+qqPlot(fit, main="QQ Plot")
+# distribution of studentized residuals
+library(MASS)
+sresid <- studres(fit) 
+hist(sresid, freq=FALSE, 
+   main="Distribution of Studentized Residuals")
+xfit<-seq(min(sresid),max(sresid),length=40) 
+yfit<-dnorm(xfit) 
+lines(xfit, yfit)
+```
+
+```{r}
+# Evaluate homoscedasticity
+# non-constant error variance test
+ncvTest(fit)
+# plot studentized residuals vs. fitted values 
+spreadLevelPlot(fit)
+```
+
+```{r}
+# Evaluate Collinearity
+vif(fit) # variance inflation factors 
+sqrt(vif(fit)) > 2 # problem?
+```
+
+
+```{r}
+# Test for Autocorrelated Errors
+durbinWatsonTest(fit)
+```
+
+```{r}
+# Global test of model assumptions
+library(gvlma)
+gvmodel <- gvlma(fit) 
+summary(gvmodel)
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+ #Making a Basic scatter plot matrix
+ 
+ scatterplotMatrix(~COL+PD+URate+Pop+Taxes+Income+RTWL ,data=rtwl_data, smooth = FALSE, ellipse=
+ FALSE, main="Simple Scatterplot Matrix")
+
+```
+
+
+```{r}
+dta.r <- abs(cor(rtwl_data)) # get correlations
+dta.col <- dmat.color(dta.r) # get colors
+# reorder variables so those with highest correlation
+# are closest to the diagonal
+dta.o <- order.single(dta.r) 
+cpairs(rtwl_data, dta.o, panel.colors=dta.col, gap=.5,
+main="Variables Ordered and Colored by Correlation" )
+
+dta.r
+```
+
+
+attach(rtwl_data) 
+s3d <-scatterplot3d(COL,Income,RTWL, pch=16, highlight.3d=TRUE,
+  type="h", main="3D Scatterplot")
+fit <- lm(COL ~ Income+ RTWL, data = rtwl_data) 
+s3d$plane3d(fit)
+```{r}
+
+
+
+A6A9 <- ggplot(rtwl_data, aes(x = COL, y = Income)) + geom_point() + geom_point(aes(color = factor(RTWL)))
+A6A9
+
+A6A10 <- ggplot(rtwl_data, aes(x = URate, y = Taxes)) + geom_point() + geom_point(aes(color = factor(RTWL)))
+A6A10
+
+A6A10 <- ggplot(rtwl_data, aes(x = URate, y = Taxes)) + geom_point() + geom_point(aes(color = factor(RTWL)))
+A6A10
+
+A6A11 <- ggplot(rtwl_data, aes(x = COL, y = PD)) + geom_point() + geom_point(aes(color = factor(RTWL)))
+A6A11
+```
+

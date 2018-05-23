@@ -1,0 +1,546 @@
+---
+title: "Regression analysis on death rate data"
+output:
+  word_document: default
+  html_notebook: default
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+
+```{r}
+
+library(dplyr)
+library(scatterplot3d)
+library(psych)
+library(ggplot2)
+library(car)
+library(gclus)
+library(GGally)
+library(fields)
+
+deathrate <- read.table("x28_NoHeader", header = FALSE)
+
+colnames(deathrate) <- c("Index",
+                         "A1",
+                         "A2",
+                         "A3",
+                         "A4",
+                         "A5",
+                         "A6",
+                         "A7",
+                         "A8",
+                         "A9",
+                         "A10",
+                         "A11",
+                         "A12",
+                         "A13",                         
+                         "A14",
+                         "A15",
+                         "B")
+# colnames(deathrate) <- c("Index",
+#                          "percip",
+#                          "Jantemp",
+#                          "Julytemp",
+#                          "popover65",
+#                          "housesize",
+#                          "schooling",
+#                          "kitchen",
+#                          "urbanpop",
+#                          "nonwhite",
+#                          "officeworkers",
+#                          "poorfamily",
+#                          "hydrocarbonpollution",
+#                          "nitrogenpollution",                         
+#                          "sulfardioxidepollution",
+#                          "humidity",
+#                          "Death Rates")
+
+# 
+# Index
+# A1 average annual precipitation in inches
+# A2 average January temperature in degrees Fahrenheit
+# A3 average July temperature in degrees Fahrenheit
+# A4 percent of 1960 SMSA population 65 years old or older
+## A5 household size, 1960
+## A6 schooling for persons over 22
+# A7 household with full kitchens
+## A8 population per square mile in urbanized areas
+## A9 percent nonwhite population
+# A10 percent office workers
+## A11 poor families (annual income under $3000)
+# A12 relative pollution potential of hydrocarbons
+# A13 relative pollution potential of oxides of Nitrogen
+# A14 relative pollution of Sulfur Dioxide
+# A15 percent relative humidity, annual average at 1pm.
+# B death rate
+```
+
+
+Here we will create a subset of the original dataframe with the desired features.
+```{r}
+myvars <- c("A5", "A6", "A9", "A11", "B")
+deathrate_1 <- deathrate[myvars]
+```
+
+```{r}
+ #Making a Basic scatter plot matrix
+ 
+ scatterplotMatrix(~B+A5+A6+A9+A11,data=deathrate_1, smooth = FALSE, ellipse=
+ FALSE, main="Simple Scatterplot Matrix")
+
+```
+
+
+
+```{r}
+dta.r <- abs(cor(deathrate_1)) # get correlations
+dta.col <- dmat.color(dta.r) # get colors
+# reorder variables so those with highest correlation
+# are closest to the diagonal
+dta.o <- order.single(dta.r) 
+cpairs(deathrate_1, dta.o, panel.colors=dta.col, gap=.5,
+main="Variables Ordered and Colored by Correlation" )
+
+dta.r
+```
+
+
+
+
+
+
+
+
+```{r}
+# 3D Scatterplot with Coloring and Vertical Lines
+# and Regression Plane 
+ 
+attach(deathrate_1) 
+s3d <-scatterplot3d(A6,A9,B, pch=16, highlight.3d=TRUE,
+  type="h", main="3D Scatterplot")
+fit <- lm(B ~ A6+ A9, data = deathrate_1) 
+s3d$plane3d(fit)
+
+A6A9 <- ggplot(deathrate_1, aes(x = A6, y = A9)) + geom_point() + geom_point(aes(color = B)) 
+A6A9
+
+attach(deathrate_1) 
+s3d <-scatterplot3d(A5,A6,B, pch=16, highlight.3d=TRUE,
+  type="h", main="3D Scatterplot")
+fit <- lm(B ~ A5+ A6, data = deathrate_1) 
+s3d$plane3d(fit)
+
+A5A6 <- ggplot(deathrate_1, aes(x = A5, y = A6)) + geom_point() + geom_point(aes(color = B)) 
+A5A6
+
+attach(deathrate_1) 
+s3d <-scatterplot3d(A6,A11,B, pch=16, highlight.3d=TRUE,
+  type="h", main="3D Scatterplot")
+fit <- lm(B ~ A6+ A11, data = deathrate_1) 
+s3d$plane3d(fit)
+
+A6A11 <- ggplot(deathrate_1, aes(x = A6, y = A11)) + geom_point() + geom_point(aes(color = B)) 
+A6A11
+```
+
+
+
+```{r}
+#Finding correlation coeff r with p-values
+#install.packages("psych")
+library(psych)
+corr.test(deathrate_1, y = NULL, use =
+"pairwise",method="pearson",adjust="holm",alpha=.05)
+```
+
+
+
+
+
+# ```{r}
+# ggcorr(deathrate_1, palette = "RdYlGn", name = "rho", 
+#        label = FALSE, label_color = "black")
+# 
+# # Correlation plot
+# ggcorr(deathrate_1, palette = "RdBu", label = TRUE)
+# ```
+
+```{r}
+ggcorr(deathrate_1, palette = "RdYlGn", name = "rho", 
+       label = FALSE, label_color = "black")
+
+# Correlation plot
+ggcorr(deathrate_1, palette = "RdBu", label = TRUE)
+```
+
+```{r}
+ggpairs(deathrate_1, columns = 1:ncol(deathrate_1), title = "",  
+  axisLabels = "show", columnLabels = colnames(deathrate_1[, 1:5]))
+```
+## A5 household size, 1960
+## A6 schooling for persons over 22
+# A7 household with full kitchens
+## A8 population per square mile in urbanized areas
+## A9 percent nonwhite population
+# A10 percent office workers
+## A11 poor families (annual income under $3000)
+The Model we will choose is 
+
+```{r}
+ggpairs(deathrate_1, columns = 2:ncol(deathrate_1), title = "",  
+  axisLabels = "show", columnLabels = colnames(deathrate_1[, 2:5]))
+```
+
+** Y^i = A5X1 + A6X2 + A9X3 + A11X4 + error^i, error is normal rv with mean=o and constant varaince for all i. **
+
+```{r}
+fit1 <- lm(formula = deathrate_1$B ~ deathrate$A5 + deathrate_1$A6 + deathrate_1$A9 + deathrate_1$A11)
+
+fit2 <- lm(formula = deathrate_1$B ~deathrate_1$A6 + deathrate_1$A9 + deathrate_1$A11)
+
+summary(fit1)
+anova(fit1, fit2)
+summary(fit2)
+```
+
+
+```{r}
+shapiro.test(fit2$residuals)
+```
+
+```{r}
+layout(matrix(c(1,2,3,4),2,2)) 
+plot(fit2)
+```
+```{r}
+hist(fit2$residuals)
+```
+
+
+
+```{r}
+"A6"
+summary(deathrate_1$A6)
+"A9"
+summary(deathrate_1$A9)
+"A11"
+summary(deathrate_1$A11)
+
+```
+
+```{r}
+results = lm(B ~ A6 + A9 + A11, data=deathrate_1)
+
+"Prediction: If the minimum value for all the predictors occured"
+newdat1 = data.frame(A6 = 9, A9=0.8, A11 = 9.4)
+predict(results, newdata = newdat1, interval="confidence")
+
+"Prediction: If the mean of all the predictors occured"
+newdat2 = data.frame(A6 = 10.97, A9=11.87, A11 = 14.37)
+predict(results, newdata = newdat2, interval="confidence")
+
+"Prediction: If the max of all the predictors occured"
+newdat3 = data.frame(A6 = 12.3, A9=38.50, A11 = 26.40)
+predict(results, newdata = newdat3, interval="confidence")
+
+"Prediction: max min min"
+newdat4 = data.frame(A6 = 12.3, A9=0.8, A11 = 9.4)
+predict(results, newdata = newdat4, interval="confidence")
+```
+
+```{r}
+summary(results)
+```
+Show in New WindowClear OutputExpand/Collapse Output
+
+Show in New WindowClear OutputExpand/Collapse Output
+
+Attaching package: ‘dplyr’
+
+The following object is masked from ‘package:GGally’:
+
+    nasa
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+
+Attaching package: ‘psych’
+
+The following objects are masked from ‘package:ggplot2’:
+
+    %+%, alpha
+
+Loading required package: carData
+
+Attaching package: ‘car’
+
+The following object is masked from ‘package:psych’:
+
+    logit
+
+The following object is masked from ‘package:dplyr’:
+
+    recode
+
+Loading required package: cluster
+Show in New WindowClear OutputExpand/Collapse Output
+
+           A5        A6        A9       A11         B
+A5  1.0000000 0.3950745 0.4188986 0.2599043 0.3573149
+A6  0.3950745 1.0000000 0.2086791 0.4033385 0.5109837
+A9  0.4188986 0.2086791 1.0000000 0.7053826 0.6437730
+A11 0.2599043 0.4033385 0.7053826 1.0000000 0.4104873
+B   0.3573149 0.5109837 0.6437730 0.4104873 1.0000000
+R Console
+
+Show in New WindowClear OutputExpand/Collapse Output
+
+
+The following objects are masked from deathrate_1 (pos = 3):
+
+    A11, A5, A6, A9, B
+
+The following objects are masked from deathrate_1 (pos = 3):
+
+    A11, A5, A6, A9, B
+
+The following objects are masked from deathrate_1 (pos = 4):
+
+    A11, A5, A6, A9, B
+
+R Console
+
+
+
+
+
+Show in New WindowClear OutputExpand/Collapse Output
+Call:corr.test(x = deathrate_1, y = NULL, use = "pairwise", method = "pearson", 
+    adjust = "holm", alpha = 0.05)
+Correlation matrix 
+       A5    A6    A9   A11     B
+A5   1.00 -0.40  0.42  0.26  0.36
+A6  -0.40  1.00 -0.21 -0.40 -0.51
+A9   0.42 -0.21  1.00  0.71  0.64
+A11  0.26 -0.40  0.71  1.00  0.41
+B    0.36 -0.51  0.64  0.41  1.00
+Sample Size 
+[1] 60
+Probability values (Entries above the diagonal are adjusted for multiple tests.) 
+      A5   A6   A9  A11    B
+A5  0.00 0.01 0.01 0.09 0.02
+A6  0.00 0.00 0.11 0.01 0.00
+A9  0.00 0.11 0.00 0.00 0.00
+A11 0.04 0.00 0.00 0.00 0.01
+B   0.01 0.00 0.00 0.00 0.00
+
+ To see confidence intervals of the correlations, print with the short=FALSE option
+Modify Chunk OptionsRun All Chunks AboveRun Current ChunkModify Chunk OptionsRun All Chunks AboveRun Current ChunkModify Chunk OptionsRun All Chunks AboveRun Current ChunkModify Chunk OptionsRun All Chunks AboveRun Current Chunk
+Show in New WindowClear OutputExpand/Collapse Output
+
+
+
+Modify Chunk OptionsRun All Chunks AboveRun Current Chunk
+Show in New WindowClear OutputExpand/Collapse Output
+
+Call:
+lm(formula = deathrate_1$B ~ deathrate$A5 + deathrate_1$A6 + 
+    deathrate_1$A9 + deathrate_1$A11)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-108.201  -24.577   -0.139   23.442  100.826 
+
+Coefficients:
+                 Estimate Std. Error t value Pr(>|t|)    
+(Intercept)     1530.0886   202.3078   7.563 4.51e-10 ***
+deathrate$A5     -48.2837    45.9965  -1.050  0.29844    
+deathrate_1$A6   -38.5904     7.3424  -5.256 2.47e-06 ***
+deathrate_1$A9     5.8119     0.9036   6.432 3.20e-08 ***
+deathrate_1$A11   -5.4068     1.9339  -2.796  0.00712 ** 
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 39.79 on 55 degrees of freedom
+Multiple R-squared:  0.6185,	Adjusted R-squared:  0.5908 
+F-statistic: 22.29 on 4 and 55 DF,  p-value: 5.57e-11
+
+Analysis of Variance Table
+
+Model 1: deathrate_1$B ~ deathrate$A5 + deathrate_1$A6 + deathrate_1$A9 + 
+    deathrate_1$A11
+Model 2: deathrate_1$B ~ deathrate_1$A6 + deathrate_1$A9 + deathrate_1$A11
+  Res.Df   RSS Df Sum of Sq      F Pr(>F)
+1     55 87094                           
+2     56 88839 -1   -1744.9 1.1019 0.2984
+
+Call:
+lm(formula = deathrate_1$B ~ deathrate_1$A6 + deathrate_1$A9 + 
+    deathrate_1$A11)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-111.810  -23.740    0.083   21.385  103.480 
+
+Coefficients:
+                 Estimate Std. Error t value Pr(>|t|)    
+(Intercept)     1337.5455    85.4275  15.657  < 2e-16 ***
+deathrate_1$A6   -35.5427     6.7502  -5.265 2.30e-06 ***
+deathrate_1$A9     5.4250     0.8258   6.569 1.78e-08 ***
+deathrate_1$A11   -4.9799     1.8924  -2.632    0.011 *  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 39.83 on 56 degrees of freedom
+Multiple R-squared:  0.6109,	Adjusted R-squared:   0.59 
+F-statistic:  29.3 on 3 and 56 DF,  p-value: 1.591e-11
+
+Modify Chunk OptionsRun All Chunks AboveRun Current Chunk
+Show in New WindowClear OutputExpand/Collapse Output
+                                                                        
+R Console
+
+
+Modify Chunk OptionsRun All Chunks AboveRun Current Chunk
+Show in New WindowClear OutputExpand/Collapse Output
+
+	Shapiro-Wilk normality test
+
+data:  fit2$residuals
+W = 0.99141, p-value = 0.9498
+
+Modify Chunk OptionsRun All Chunks AboveRun Current Chunk
+Show in New WindowClear OutputExpand/Collapse Output
+
+Modify Chunk OptionsRun All Chunks AboveRun Current Chunk
+Show in New WindowClear OutputExpand/Collapse Output
+
+
+
+
+
+Show in New WindowClear OutputExpand/Collapse Output
+[1] "A6"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   9.00   10.40   11.05   10.97   11.50   12.30 
+[1] "A9"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   0.80    4.95   10.40   11.87   15.65   38.50 
+[1] "A11"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   9.40   12.00   13.20   14.37   15.15   26.40 
+   
+   
+   
+   
+   
+   
+   
+   
+   
+```{r}
+# Below: We will make the REGRESSION "CUBE" for the three variables, and the predicted death rate, given # by a color gradient.
+
+## A6 schooling for persons over 22
+# A7 household with full kitchens
+## A8 population per square mile in urbanized areas
+## A9 percent nonwhite population
+# A10 percent office workers
+## A11 poor families (annual income under $3000)
+
+level1 <- matrix(nrow = 18, ncol = 38)
+
+x= seq(from=9.4, to=26.4, by = 1)
+y= seq(.8,38.5,1)
+
+for (j in 1:38){
+    for (i in 1:18){
+    level1[i,j] <- predict(results, newdata = data.frame(A6 = 9, A9=y[j], A11 = x[i]))
+  
+  }
+}
+
+# A6 = 10.40
+level2 <- matrix(nrow = 18, ncol = 38)
+
+x= seq(from=9.4, to=26.4, by = 1)
+y= seq(.8,38.5,1)
+
+for (j in 1:38){
+    for (i in 1:18){
+    level2[i,j] <- predict(results, newdata = data.frame(A6 = 10.40, A9=y[j], A11 = x[i]))
+  
+  }
+}
+
+# A6 = 11.05
+level3 <- matrix(nrow = 18, ncol = 38)
+
+x= seq(from=9.4, to=26.4, by = 1)
+y= seq(.8,38.5,1)
+
+for (j in 1:38){
+    for (i in 1:18){
+    level3[i,j] <- predict(results, newdata = data.frame(A6 = 11.05, A9=y[j], A11 = x[i]))
+  
+  }
+}
+
+# A6 = 11.50
+level4 <- matrix(nrow = 18, ncol = 38)
+
+x= seq(from=9.4, to=26.4, by = 1)
+y= seq(.8,38.5,1)
+
+for (j in 1:38){
+    for (i in 1:18){
+    level4[i,j] <- predict(results, newdata = data.frame(A6 = 11.50, A9=y[j], A11 = x[i]))
+  
+  }
+}
+
+# A6 = 12.30
+level5 <- matrix(nrow = 18, ncol = 38)
+
+x= seq(from=9.4, to=26.4, by = 1)
+y= seq(.8,38.5,1)
+
+for (j in 1:38){
+    for (i in 1:18){
+    level5[i,j] <- predict(results, newdata = data.frame(A6 = 12.30, A9=y[j], A11 = x[i]))
+  
+  }
+}
+```
+
+
+
+```{r}
+par(oma=c( 0,0,0,4)) # margin of 4 spaces width at right hand side
+set.panel( 2,3) # 2X2 matrix of plots
+image.plot(level1, zlim = c(773,1176))
+title("A6=9")
+image.plot(level2, zlim = c(773,1176))
+title("A6=10.40")
+image.plot(level3, zlim = c(773,1176))
+title("A6=11.05")
+image.plot(level4, zlim = c(773,1176))
+title("A6=11.50")
+image.plot(level5, zlim = c(773,1176))
+title("A6=12.30")
+```
+
+```{r}
+summary(fit2$B)
+
+```
+
+

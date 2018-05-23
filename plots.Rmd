@@ -1,0 +1,46 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+require(ggplot2)
+require(ggmap)
+require(maps)
+```
+```{r}
+data[,1] <- as.character(data[,1])
+```
+
+```{r}
+# lonlat<-geocode(data[,1])
+#geocode(data[,1], is.character(data[,1])=TRUE)
+# lonlat2<-geocode(data[,1])
+lonlat3<-geocode(data[,1])
+```
+```{r}
+lonlat[4,] <- lonlat2[4,]
+lonlat[4,]
+```
+```{r}
+lonlat[8,] <- lonlat2[8,]
+lonlat[8,]
+```
+
+
+
+```{r}
+lonlat[,3] <- data$RTWL
+```
+
+
+```{r}
+ 
+library(rworldmap)
+newmap <- getMap(resolution = "med")
+plot(newmap, xlim = c(-125, -70), ylim = c(25, 50), asp = 1)
+
+points(lonlat$lon, lonlat$lat, col=ifelse(lonlat$V3==1,"red","blue"), cex = .6)
+```
+
+
