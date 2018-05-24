@@ -83,23 +83,31 @@ Start data vis
 
 
 ```{r}
-dta.r <- abs(cor(data)) # get correlations
+data1.1 <- data
+data1.1$RTWL <- as.numeric(data1.1$RTWL)
+```
+```{r}
+dta.r <- abs(cor(data1.1[,-c(1,6)] )) # get correlations
 dta.col <- dmat.color(dta.r) # get colors
 # reorder variables so those with highest correlation
 # are closest to the diagonal
 dta.o <- order.single(dta.r) 
-cpairs(data, dta.o, panel.colors=dta.col, gap=.5,
+cpairs(data1.1[,-c(1,6)], dta.o, panel.colors=dta.col, gap=.5,
 main="Variables Ordered and Colored by Correlation" )
 
 dta.r
 ```
 
+```{r}
+
+# Correlation plot
+ggcorr(data1.1[,-c(1,6)], palette = "RdBu", label = TRUE)
+```
+
+
 
 
 ```{r}
-
-
-
 A6A9 <- ggplot(data, aes(x = COL, y = Income)) + geom_point() + geom_point(aes(color = factor(RTWL)))
 A6A9
 
@@ -117,17 +125,10 @@ A6A11
 
 ```
 
-```{r}
- library(rworldmap)
-newmap <- getMap(resolution = "med")
-plot(newmap, xlim = c(-125, -70), ylim = c(25, 50), asp = 1)
-
-points(data$lon, data$lat, col=ifelse(data$RTWL==1,"red","blue"), cex = .8)
-```
 
 
 ```{r}
-usa <- map_data("usa") # we already did this, but we can do it again
+usa <- map_data("usa") 
 ggplot() + geom_polygon(data = usa, aes(x=long, y = lat, group = group)) + 
   coord_fixed(1.3) +
     geom_point( aes(x = data$lon, y = data$lat, color=factor(data$RTWL), size=data$COL)) +
@@ -136,7 +137,7 @@ ggplot() + geom_polygon(data = usa, aes(x=long, y = lat, group = group)) +
 
 ```
 ```{r}
-usa <- map_data("usa") # we already did this, but we can do it again
+usa <- map_data("usa")
 ggplot() + geom_polygon(data = usa, aes(x=long, y = lat, group = group)) + 
   coord_fixed(1.3) +
     geom_point( aes(x = data$lon, y = data$lat, color=(data$COL), size=data$Income)) 
@@ -185,6 +186,74 @@ model2 <- lm(formula = COL ~ RTWL + Pop + lon + Income + URate + PD + lon:Income
 ```{r}
 summary(model2)
 ```
+ COL ~ RTWL + Pop + lon + Income + URate + PD + lon:Income
+ 
+# Col = -538+ -48(RTWL) + 6.7e-06(Pop) + -8(lon) + .14(Income) + -5(URate) + .027(PD) + 1.3e-03(lon)(Income)
+
+The interaction term means: the rate of change of COL with respect to Income depends on the lon value. From left to right, we go from lon=-120 to -80, so the partial derivative with respect ot Income, moving from left to right, goes from 1.3e-03(-120)=-0.156 to 1.3e-03(-80)=-0.104. In the west, lon=-120, say, if income= 1, then 
+COS = -0.156(income) + -8(-120) + (some other stuff, call "c"); 
+whereas in the eastm lon=-80, if income=1, then 
+COS=-0.104(Income) + -8(-80) + (some other stuff). 
+960 + c,  640 + c
+So, given the same Income, the cost of living in the west is higher than
+
+```{r}
+COSw <- as.data.frame( c(0:100000, by=1))
+COSe <-as.data.frame( c(0:100000, by=1))
+COSw[,2] <- -0.156*(c(0:100000, by=1)) + -8*(-120)
+COSe[,2] <- -0.104*(c(0:100000,by=1)) + -8*(-80)
+```
+```{r}
+colnames(COSw)<-c("x","y")
+colnames(COSe)<-c("x","y")
+```
+```{r}
+inc <- c(-300:300, by=50)
+```
+```{r}
+
+A6A12 <- ggplot(data, aes(x = lon, y = COL)) + geom_point() + geom_point(aes(color = Income))
+A6A12
+```
+for (i in 1:length(inc)) {
+abline( -8*(inc[i]), 1.3e-03*(inc[i]))
+}
+
+```{r}
+abline( -8*(-120), -.156)
+abline(-8*(-80),-.104)
+```
+
+```{r}
+library(colorRamps)  
+library(grDevices)
+```
+```{r}
+lon <- seq(min(data$lon),max(data$lon), by=10)
+Income <- seq(min(data$Income),max(data$Income), by=10)
+gg <- expand.grid(lon=lon, Income=Income)
+```
+```{r}
+# prediction from the linear model
+gg$COL <-predict(fit,newdata=gg)
+```
+```{r}
+jet.colors <- colorRampPalette(matlab.like(9))
+ggplot(gg, aes(x=lon, y=Income, z=COL))+
+  stat_contour(aes(color=..level..),binwidth=5, size=2)+
+  scale_color_gradientn(colours=jet.colors(8))
+```
+
+> 1.336e-03*(-80)+1.423e-01
+[1] 0.03542
+> 1.336e-03*(-120)+1.423e-01
+[1] -0.01802
+
+```{r}
+summary(fit)
+```
+
+
 
 
 End: AIC model selection
